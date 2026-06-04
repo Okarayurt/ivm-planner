@@ -75,29 +75,30 @@ function CF({cat,onSave,onDel,onCan,pn}){const[n,sN]=useState(cat.name||"");cons
 // ═══════════════════════════════════════
 // TEAM SELECTOR SCREEN
 // ═══════════════════════════════════════
-function TeamSelect({onSelect}){
+function TeamSelect({onSelect,groupId}){
   const[teams,setTeams]=useState(null);
   const[newName,setNewName]=useState("");
   const[newColor,setNewColor]=useState(COLORS[0]);
   const[show,setShow]=useState(false);
-  
+  const gp="groups/"+groupId;
+
   useEffect(()=>{
-    db.ref("teams").on("value",snap=>{
+    db.ref(gp+"/teams").on("value",snap=>{
       const val=snap.val();
-      setTeams(val?Object.entries(val).map(([id,v])=>({id,...v})):[]); 
+      setTeams(val?Object.entries(val).map(([id,v])=>({id,...v})):[]);
     });
-    return()=>db.ref("teams").off();
-  },[]);
-  
+    return()=>db.ref(gp+"/teams").off();
+  },[groupId]);
+
   const addTeam=()=>{
     if(!newName.trim())return;
     const id=uid();
-    db.ref("teams/"+id).set({name:newName.trim(),color:newColor,created:new Date().toISOString()});
+    db.ref(gp+"/teams/"+id).set({name:newName.trim(),color:newColor,created:new Date().toISOString()});
     setNewName("");setShow(false);
   };
   const[confirmDel,setConfirmDel]=useState(null);
   const delTeam=(id)=>{setConfirmDel(id)};
-  const confirmDeleteTeam=()=>{if(!confirmDel)return;db.ref("teams/"+confirmDel).remove();db.ref("planners/"+confirmDel).remove();setConfirmDel(null)};
+  const confirmDeleteTeam=()=>{if(!confirmDel)return;db.ref(gp+"/teams/"+confirmDel).remove();db.ref(gp+"/planners/"+confirmDel).remove();setConfirmDel(null)};
   
   if(!teams)return e("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",background:"#0e0e1a",color:"#ccc",gap:12}},e(Logo)," Laden...");
 
@@ -137,24 +138,26 @@ function TeamSelect({onSelect}){
 // ═══════════════════════════════════════
 // MAIN PLANNER (per team)
 // ═══════════════════════════════════════
-function Planner({teamId,teamName,onBack}){
+function Planner({teamId,teamName,onBack,groupId}){
+const base="groups/"+groupId+"/planners/"+teamId;
+const lsKey="ivm-planner-"+groupId+"-"+teamId;
 const[data,setData]=useState(null);const[lo,sLo]=useState(!0);const[vs,sVS]=useState(toISO(addD(new Date(),-3)));const[vd,sVD]=useState(28);const[eT,sET]=useState(null);const[eC,sEC]=useState(null);const[cx,sCx]=useState(null);const[dm,sDM]=useState(null);const[shV,sShV]=useState(!1);const[shT,sShT]=useState(!1);const[shPDF,sShPDF]=useState(false);const[pdfHtml,setPdfHtml]=useState(null);const[pdfS,sPdfS]=useState(toISO(new Date()));const[pdfE,sPdfE]=useState(addD(new Date(),28));const[nvn,sNVN]=useState("");const[cb,sCB]=useState(null);const[col,sCol]=useState(new Set());const[di,sDI]=useState(null);const[sel,sSel]=useState(null);const[mt,sMt]=useState(!1);const[toast,sToast]=useState(null);const[sync,setSync]=useState("connecting");
 const histRef=useRef([]);const tlRef=useRef(null);const dataRef=useRef(null);const justDraggedRef=useRef(0);
 // dbRef removed - using direct db.ref calls
 
 useEffect(()=>{
   console.log("Loading data for team:",teamId);
-  db.ref("planners/"+teamId).once("value").then(snap=>{
+  db.ref(base).once("value").then(snap=>{
     const val=snap.val();
     console.log("Loaded:",val);
     const d=val?{categories:val.categories||[],tasks:val.tasks||[],dependencies:val.dependencies||[],versions:val.versions||[],templates:val.templates||[]}:{...EMPTY};
     setData(d);dataRef.current=d;setSync("synced");sLo(false);setTimeout(()=>sMt(true),100);
   }).catch(err=>{
     console.error("Load error:",err);setSync("error");
-    try{const ls=localStorage.getItem("ivm-planner-"+teamId);if(ls){const d=JSON.parse(ls);setData(d);dataRef.current=d}else{setData({...EMPTY});dataRef.current={...EMPTY}}}catch(e){setData({...EMPTY});dataRef.current={...EMPTY}}
+    try{const ls=localStorage.getItem(lsKey);if(ls){const d=JSON.parse(ls);setData(d);dataRef.current=d}else{setData({...EMPTY});dataRef.current={...EMPTY}}}catch(e){setData({...EMPTY});dataRef.current={...EMPTY}}
     sLo(false);
   });
-},[teamId]);
+},[teamId,groupId]);
 
 const show=(msg)=>{sToast(msg);setTimeout(()=>sToast(null),3000)};
 // Keep dataRef in sync
@@ -169,15 +172,15 @@ const sa=(nd,skip)=>{
   const clean=sanitize(nd);
   if(!skip&&dataRef.current){histRef.current.push(JSON.stringify(dataRef.current));if(histRef.current.length>30)histRef.current.shift()}
   setData(clean);dataRef.current=clean;
-  try{localStorage.setItem("ivm-planner-"+teamId,JSON.stringify(clean))}catch(e){}
-  const path="planners/"+teamId;
+  try{localStorage.setItem(lsKey,JSON.stringify(clean))}catch(e){}
+  const path=base;
   const summary=Object.keys(clean).map(k=>k.slice(0,3)+":"+((clean[k]&&clean[k].length)||0)).join(" ");
   show("💾 "+summary);
   console.log("WRITE to",path,clean);
   db.ref(path).set(clean).then(()=>{show("✅ "+summary);setSync("synced");console.log("WRITE OK to",path)}).catch(e=>{show("❌ "+e.message);console.error("WRITE FAIL",path,e);setSync("error")})
 };
 const undo=()=>{if(!histRef.current.length)return;const p=JSON.parse(histRef.current.pop());sa(p,true);show("↩ Undo")};
-const reload=()=>{show("🔄 Herladen...");db.ref("planners/"+teamId).once("value").then(snap=>{const val=snap.val();const d=val?sanitize(val):{...EMPTY};setData(d);dataRef.current=d;show("✅ Herladen! cat:"+d.categories.length+" tas:"+d.tasks.length)}).catch(e=>show("❌ "+e.message))};
+const reload=()=>{show("🔄 Herladen...");db.ref(base).once("value").then(snap=>{const val=snap.val();const d=val?sanitize(val):{...EMPTY};setData(d);dataRef.current=d;show("✅ Herladen! cat:"+d.categories.length+" tas:"+d.tasks.length)}).catch(e=>show("❌ "+e.message))};
 const fc=useMemo(()=>{if(!data)return[];const b=(pid,d)=>{const k=data.categories.filter(c=>(c.parentId||null)===(pid||null)).sort((a,b)=>(a.order||0)-(b.order||0));const r=[];k.forEach(c=>{r.push({...c,depth:d});if(!col.has(c.id))r.push(...b(c.id,d+1))});return r};return b(null,0)},[data,col]);
 const hc=id=>data?.categories.some(c=>(c.parentId||null)===(id||null));
 const tc=id=>{const s=new Set(col);s.has(id)?s.delete(id):s.add(id);sCol(s)};
@@ -242,7 +245,7 @@ e("button",{onClick:()=>sVS(addD(new Date(),-3)),style:{...bS("#252540"),padding
 e("select",{value:vd,onChange:ev=>{sVD(+ev.target.value);console.log("View days set to:",+ev.target.value)},style:{...iS,width:80,padding:"7px",fontSize:12}},e("option",{value:14},"2 wkn"),e("option",{value:21},"3 wkn"),e("option",{value:28},"4 wkn"),e("option",{value:42},"6 wkn"),e("option",{value:56},"8 wkn")))),
 
 // MAIN — single scroll container with sticky header
-e("div",{ref:tlRef,style:{flex:1,overflowY:"auto",overflowX:"hidden",position:"relative"},onScroll:ev=>{if(ev.currentTarget.scrollLeft!==0)ev.currentTarget.scrollLeft=0},onClick:()=>{if(dm)sDM(null);else sSel(null)}},
+e("div",{ref:tlRef,style:{flex:1,overflowY:"auto",overflowX:"hidden",position:"relative",display:"flex",flexDirection:"column"},onScroll:ev=>{if(ev.currentTarget.scrollLeft!==0)ev.currentTarget.scrollLeft=0},onClick:()=>{if(dm)sDM(null);else sSel(null)}},
 // HEADER ROW (sticky top): sidebar-header + day-header, side by side
 e("div",{style:{position:"sticky",top:0,zIndex:20,display:"flex",height:HEAD_H,background:"#141425",borderBottom:"1px solid #252540",flexShrink:0}},
 e("div",{style:{width:SIDEBAR_W,flexShrink:0,background:"#121222",borderRight:"1px solid #252540",borderBottom:"1px solid #252540",display:"flex",alignItems:"center",padding:"0 14px",justifyContent:"space-between",position:"sticky",left:0,zIndex:21}},e("span",{style:{fontSize:12,color:"#555",textTransform:"uppercase",letterSpacing:1.5,fontWeight:600}},"Categorieën"),e("button",{onClick:ev=>{ev.stopPropagation();sEC({isNew:!0,parentId:null,name:"",color:COLORS[data.categories.length%COLORS.length],period:null})},style:{background:"#00b8d4",border:"none",borderRadius:6,width:22,height:22,color:"#fff",fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}},"+")),
@@ -251,12 +254,12 @@ e("div",{style:{display:"flex",height:HEAD_H*0.4}},months.map((m,i)=>e("div",{ke
 e("div",{style:{display:"flex",height:HEAD_H*0.6}},days.map((d,i)=>{const dt=new Date(d);const isT=toISO(new Date())===d;const we=isWE(d);const bg=isT?"rgba(0,200,83,.12)":we?"rgba(255,23,68,.06)":"transparent";const col=isT?"#00c853":we?"#ff5274":"#7799bb";return e("div",{key:i,style:{width:DAY_W,borderRight:"1px solid rgba(255,255,255,.04)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:bg}},e("span",{style:{fontWeight:isT?800:600,fontSize:14,color:col}},dt.getDate()),e("span",{style:{fontSize:9,color:col,opacity:.8,fontWeight:500}},DN[dt.getDay()]))})))),
 
 // BODY ROW: sidebar-col (sticky left) + timeline-body
-e("div",{style:{display:"flex",position:"relative",minHeight:totalH}},
+e("div",{style:{display:"flex",position:"relative",flex:"1 0 auto",minHeight:totalH}},
 e("div",{style:{width:SIDEBAR_W,flexShrink:0,background:"#121222",borderRight:"1px solid #252540",position:"sticky",left:0,zIndex:10}},fc.map((cat,ci)=>{const hk=hc(cat.id);const ic=col.has(cat.id);return e("div",{key:cat.id,onContextMenu:ev=>cCtx(ev,cat),style:{height:ROW_H,display:"flex",alignItems:"center",padding:`0 8px 0 ${8+cat.depth*INDENT}px`,borderBottom:"1px solid #1a1a2e",gap:7,animation:mt?`catSlide .3s ease-out ${ci*.04}s both`:"none"},onMouseEnter:ev=>{ev.currentTarget.style.background="#1a1a30"},onMouseLeave:ev=>{ev.currentTarget.style.background="transparent"}},e("div",{style:{width:14,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}},hk&&e("span",{onClick:ev=>{ev.stopPropagation();tc(cat.id)},style:{cursor:"pointer",fontSize:10,color:"#666",display:"inline-block",transform:ic?"rotate(-90deg)":"",transition:"transform .2s"}},"▼")),e("div",{style:{width:11,height:11,borderRadius:3,background:cat.color,flexShrink:0}}),e("span",{style:{fontSize:12,fontWeight:cat.depth===0?700:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1,lineHeight:1.2},title:cat.name},cat.name),e("span",{onClick:ev=>{ev.stopPropagation();cCtx(ev,cat)},style:{color:"#555",cursor:"pointer",fontSize:13,padding:"0 3px",flexShrink:0,lineHeight:1}},"⋮"))}),fc.length===0&&e("div",{style:{padding:16,textAlign:"center",color:"#444",fontSize:11}},"Klik ",e("strong",{style:{color:"#00b8d4"}},"+"))),
 
-e("div",{style:{flex:1,position:"relative",height:totalH}},
-days.map((d,i)=>e("div",{key:i,style:{position:"absolute",left:i*DAY_W,top:0,width:DAY_W,height:totalH,borderRight:"1px solid rgba(255,255,255,.025)",background:isWE(d)?"rgba(255,23,68,.04)":"transparent"}})),
-(()=>{const ti=diffD(vs,toISO(new Date()));return ti>=0&&ti<totalDays?e("div",{style:{position:"absolute",left:ti*DAY_W+DAY_W/2-1,top:0,width:3,height:totalH,background:"linear-gradient(180deg,#00c853,#00c85388)",zIndex:5,borderRadius:2}}):null})(),
+e("div",{style:{flex:1,position:"relative",minHeight:totalH}},
+days.map((d,i)=>e("div",{key:i,style:{position:"absolute",left:i*DAY_W,top:0,width:DAY_W,height:"100%",borderRight:"1px solid rgba(255,255,255,.025)",background:isWE(d)?"rgba(255,23,68,.04)":"transparent"}})),
+(()=>{const ti=diffD(vs,toISO(new Date()));return ti>=0&&ti<totalDays?e("div",{style:{position:"absolute",left:ti*DAY_W+DAY_W/2-1,top:0,width:3,height:"100%",background:"linear-gradient(180deg,#00c853,#00c85388)",zIndex:5,borderRadius:2}}):null})(),
 fc.map((cat,ci)=>{if(!cat.period)return null;const s=diffD(vs,cat.period.start),dur=diffD(cat.period.start,cat.period.end)+1;return e("div",{key:"p"+cat.id,style:{position:"absolute",left:s*DAY_W,top:ci*ROW_H+4,width:dur*DAY_W,height:ROW_H-8,background:cat.color,opacity:.06,borderRadius:6}})}),
 fc.map((cat,i)=>e("div",{key:cat.id,style:{position:"absolute",left:0,top:i*ROW_H,width:"100%",height:ROW_H,borderBottom:"1px solid rgba(255,255,255,.03)"},onContextMenu:ev=>cCtx(ev,cat)})),
 data.tasks.map((t,ti)=>{const ci=fc.findIndex(c=>c.id===t.categoryId);if(ci<0)return null;const so=diffD(vs,t.startDate),dur=Math.max(1,diffD(t.startDate,t.endDate)+1);const x=so*DAY_W,w=dur*DAY_W,y=ci*ROW_H+TPAD,h=TH;const isSel=sel===t.id;const isSrc=dm&&dm.from===t.id;
@@ -308,33 +311,43 @@ function Root(){
   const[teamId,setTeamId]=useState(null);
   const[teamName,setTeamName]=useState("");
   const[accessOk,setAccessOk]=useState(null);
-  
-  // Check if running in Teams
+  const[groupId,setGroupId]=useState(null);
+
+  // Check access + resolve Teams group id
   useEffect(()=>{
-    setTimeout(()=>{
-      // Allow access from Teams OR localhost for development
-      const isLocal=location.hostname==="localhost"||location.hostname==="127.0.0.1";
-      const isTeams=window.__inTeams===true;
-      setAccessOk(isTeams||isLocal);
-    },1500); // Wait for Teams SDK to initialize
+    const isLocal=location.hostname==="localhost"||location.hostname==="127.0.0.1";
+    let done=false;
+    const finish=(gid)=>{if(done)return;done=true;const isTeams=window.__inTeams===true;setAccessOk(isTeams||isLocal);setGroupId(gid||"local")};
+    // Try to read the Teams context for the group id
+    (async()=>{
+      try{
+        const ctx=await microsoftTeams.app.getContext();
+        const gid=(ctx&&ctx.team&&(ctx.team.groupId||ctx.team.internalId))||(ctx&&ctx.chat&&ctx.chat.id)||(ctx&&ctx.channel&&ctx.channel.id)||"local";
+        window.__inTeams=true;
+        finish(gid);
+      }catch(ex){/* not in Teams */}
+    })();
+    // Fallback if getContext never resolves (browser / blocked)
+    setTimeout(()=>finish("local"),1500);
   },[]);
-  
-  // Remember last team
+
+  // Remember last team (per group)
   useEffect(()=>{
-    const last=localStorage.getItem("ivm-last-team");
+    if(!groupId)return;
+    const last=localStorage.getItem("ivm-last-team-"+groupId);
     if(last){try{const o=JSON.parse(last);setTeamId(o.id);setTeamName(o.name)}catch{}}
-  },[]);
-  
+  },[groupId]);
+
   const selectTeam=(id,name)=>{
     setTeamId(id);setTeamName(name);
-    localStorage.setItem("ivm-last-team",JSON.stringify({id,name}));
+    localStorage.setItem("ivm-last-team-"+groupId,JSON.stringify({id,name}));
   };
-  const goBack=()=>{setTeamId(null);setTeamName("");localStorage.removeItem("ivm-last-team")};
-  
-  if(accessOk===null)return e("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",background:"#0e0e1a",color:"#ccc",gap:12}},e(Logo),e("span",{style:{fontSize:18}},"Verbinding checken..."));
+  const goBack=()=>{setTeamId(null);setTeamName("");localStorage.removeItem("ivm-last-team-"+groupId)};
+
+  if(accessOk===null||groupId===null)return e("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",background:"#0e0e1a",color:"#ccc",gap:12}},e(Logo),e("span",{style:{fontSize:18}},"Verbinding checken..."));
   if(accessOk===false)return e("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100vh",background:"#0e0e1a",padding:40,textAlign:"center"}},e(Logo),e("h2",{style:{marginTop:20,color:"#fff"}},"Toegang Geweigerd"),e("p",{style:{color:"#888",marginTop:10,fontSize:16,maxWidth:400,lineHeight:1.6}},"IVM Planner is alleen beschikbaar via Microsoft Teams. Open de app in Teams om verder te gaan."),e("div",{style:{marginTop:24,padding:"12px 24px",background:"#1a1a30",borderRadius:8,color:"#555",fontSize:13}},"Teams → Apps → IVM Planner"));
-  if(!teamId)return e(TeamSelect,{onSelect:selectTeam});
-  return e(Planner,{teamId,teamName,onBack:goBack});
+  if(!teamId)return e(TeamSelect,{onSelect:selectTeam,groupId});
+  return e(Planner,{teamId,teamName,onBack:goBack,groupId});
 }
 
 ReactDOM.render(e(TeamsGate,null,e(Root)),document.getElementById("root"));
