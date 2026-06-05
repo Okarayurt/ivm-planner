@@ -1,7 +1,7 @@
 {
   "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
   "manifestVersion": "1.17",
-  "version": "1.8.7",
+  "version": "1.8.8",
   "id": "44d396d9-07cb-4bd7-b47b-0e75bdb41d0c",
   "developer": {
     "name": "ICT Vanaf Morgen Refurbish",
@@ -14,26 +14,17 @@
     "full": "IVM Planner - Team Project Planning"
   },
   "description": {
-    "short": "Project planning voor het team",
-    "full": "Een interactieve planner voor het team. Plan taken, stel dependencies in, beheer categorieën en subcategorieën, sla versies op en werk samen in real-time."
+    "short": "Project planning per team",
+    "full": "Een interactieve planner per Teams-team. Elk team heeft zijn eigen planners. Plan taken, stel dependencies in, beheer categorieën en subcategorieën, sla versies op en werk samen."
   },
   "icons": {
     "color": "color.png",
     "outline": "outline.png"
   },
   "accentColor": "#00b8d4",
-  "staticTabs": [
-    {
-      "entityId": "ivmPlanner",
-      "name": "IVM Planner",
-      "contentUrl": "https://okarayurt.github.io/ivm-planner/?v=1.8.7",
-      "websiteUrl": "https://okarayurt.github.io/ivm-planner/?v=1.8.7",
-      "scopes": ["personal"]
-    }
-  ],
   "configurableTabs": [
     {
-      "configurationUrl": "https://okarayurt.github.io/ivm-planner/?v=1.8.7",
+      "configurationUrl": "https://okarayurt.github.io/ivm-planner/?v=1.8.8",
       "canUpdateConfiguration": false,
       "scopes": ["team", "groupChat"]
     }

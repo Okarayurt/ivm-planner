@@ -75,7 +75,7 @@ function CF({cat,onSave,onDel,onCan,pn}){const[n,sN]=useState(cat.name||"");cons
 // ═══════════════════════════════════════
 // TEAM SELECTOR SCREEN
 // ═══════════════════════════════════════
-function TeamSelect({onSelect,groupId}){
+function TeamSelect({onSelect,groupId,groupName}){
   const[teams,setTeams]=useState(null);
   const[newName,setNewName]=useState("");
   const[newColor,setNewColor]=useState(COLORS[0]);
@@ -104,7 +104,7 @@ function TeamSelect({onSelect,groupId}){
 
   return e("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100vh",background:"#0e0e1a",padding:40}},
     e("div",{style:{maxWidth:600,width:"100%"}},
-      e("div",{style:{display:"flex",alignItems:"center",gap:14,marginBottom:32}},e(Logo),e("div",null,e("div",{style:{fontSize:28,fontWeight:800}},"IVM Planner"),e("div",{style:{fontSize:12,color:"#555",textTransform:"uppercase",letterSpacing:2}},"Kies een team"))),
+      e("div",{style:{display:"flex",alignItems:"center",gap:14,marginBottom:32}},e(Logo),e("div",null,e("div",{style:{fontSize:28,fontWeight:800}},"IVM Planner"),e("div",{style:{fontSize:12,color:"#555",textTransform:"uppercase",letterSpacing:2}},"Kies een planner"),groupName&&e("div",{style:{fontSize:12,color:"#00b8d4",marginTop:4,fontWeight:600}},"📁 "+groupName))),
       
       // Team list
       e("div",{style:{display:"flex",flexDirection:"column",gap:10,marginBottom:20,maxHeight:"60vh",overflow:"auto",paddingRight:4}},
@@ -113,13 +113,13 @@ function TeamSelect({onSelect,groupId}){
           e("div",{style:{flex:1}},e("div",{style:{fontSize:16,fontWeight:700}},t.name),e("div",{style:{fontSize:11,color:"#555"}},"Aangemaakt: ",new Date(t.created).toLocaleDateString("nl-NL"))),
           e("div",{style:{display:"flex",gap:8}},
             e("button",{onClick:ev=>{ev.stopPropagation();delTeam(t.id)},style:{background:"none",border:"none",color:"#555",cursor:"pointer",fontSize:16,padding:4},title:"Verwijderen"},"🗑")))),
-        teams.length===0&&e("div",{style:{textAlign:"center",padding:40,color:"#444",fontSize:14}},"Nog geen teams. Maak er een aan!")),
-      
-      // Add team
-      !show?e("button",{onClick:()=>setShow(true),style:{...bS("#00b8d4"),width:"100%",padding:"14px",fontSize:16}},"+ Nieuw Team Aanmaken"):
+        teams.length===0&&e("div",{style:{textAlign:"center",padding:40,color:"#444",fontSize:14}},"Nog geen planners. Maak er één aan!")),
+
+      // Add planner
+      !show?e("button",{onClick:()=>setShow(true),style:{...bS("#00b8d4"),width:"100%",padding:"14px",fontSize:16}},"+ Nieuwe Planner Aanmaken"):
       e("div",{style:{background:"#1a1a30",borderRadius:12,padding:20,border:"1px solid #252540"}},
         e("div",{style:{display:"flex",gap:12,marginBottom:12}},
-          e("div",{style:{flex:1}},e("label",{style:lS},"Team Naam"),e("input",{value:newName,onChange:ev=>setNewName(ev.target.value),style:iS,placeholder:"bijv. Refurbish Alkmaar",autoFocus:true,onKeyDown:ev=>{if(ev.key==="Enter")addTeam()}})),
+          e("div",{style:{flex:1}},e("label",{style:lS},"Planner Naam"),e("input",{value:newName,onChange:ev=>setNewName(ev.target.value),style:iS,placeholder:"bijv. Q3 Refurbish",autoFocus:true,onKeyDown:ev=>{if(ev.key==="Enter")addTeam()}})),
           e("div",null,e("label",{style:lS},"Kleur"),e("div",{style:{display:"flex",gap:4}},COLORS.slice(0,6).map(c=>e("div",{key:c,onClick:()=>setNewColor(c),style:{width:28,height:28,borderRadius:6,background:c,cursor:"pointer",border:newColor===c?"3px solid #fff":"3px solid transparent"}}))))),
         e("div",{style:{display:"flex",justifyContent:"flex-end",gap:8}},
           e("button",{onClick:()=>setShow(false),style:bS("#333")},"Annuleren"),
@@ -128,8 +128,8 @@ function TeamSelect({onSelect,groupId}){
         e("div",{style:{position:"absolute",inset:0,background:"rgba(0,0,0,.65)",backdropFilter:"blur(6px)"}}),
         e("div",{onClick:v=>v.stopPropagation(),style:{position:"relative",background:"#181830",border:"1px solid #2a2a45",borderRadius:14,padding:28,width:400,maxWidth:"90vw",boxShadow:"0 24px 80px rgba(0,0,0,.6)",animation:"fadeIn .2s ease-out",textAlign:"center"}},
           e("div",{style:{fontSize:40,marginBottom:12}},"⚠️"),
-          e("h3",{style:{color:"#fff",fontSize:18,marginBottom:8}},"Team verwijderen?"),
-          e("p",{style:{color:"#888",fontSize:14,marginBottom:20}},"Dit verwijdert het team en alle planning data. Dit kan niet ongedaan worden."),
+          e("h3",{style:{color:"#fff",fontSize:18,marginBottom:8}},"Planner verwijderen?"),
+          e("p",{style:{color:"#888",fontSize:14,marginBottom:20}},"Dit verwijdert de planner en alle planning data. Dit kan niet ongedaan worden."),
           e("div",{style:{display:"flex",gap:10,justifyContent:"center"}},
             e("button",{onClick:()=>setConfirmDel(null),style:{...bS("#333"),padding:"10px 24px"}},"Annuleren"),
             e("button",{onClick:confirmDeleteTeam,style:{...bS("#ff1744"),padding:"10px 24px"}},"🗑 Verwijderen")))))
@@ -227,7 +227,7 @@ toast&&e("div",{style:{position:"fixed",bottom:24,left:"50%",transform:"translat
 // TOP BAR
 e("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 16px",background:"#141425",borderBottom:"1px solid #252540",flexShrink:0,gap:8,flexWrap:"wrap"}},
 e("div",{style:{display:"flex",alignItems:"center",gap:10}},
-  e("button",{onClick:onBack,style:{background:"none",border:"none",color:"#666",cursor:"pointer",fontSize:20,padding:"4px 8px"},title:"Terug naar teams"},"←"),
+  e("button",{onClick:onBack,style:{background:"none",border:"none",color:"#666",cursor:"pointer",fontSize:20,padding:"4px 8px"},title:"Terug naar planners"},"←"),
   e(Logo),e("div",null,e("div",{style:{fontSize:20,fontWeight:800}},"IVM Planner"),e("div",{style:{display:"flex",alignItems:"center",gap:6}},e("span",{style:{width:8,height:8,borderRadius:"50%",background:sc,display:"inline-block"}}),e("span",{style:{fontSize:10,color:"#888"}},teamName)))),
 e("div",{style:{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}},
 dm&&e("div",{style:{background:"#ff174420",border:"1px solid #ff1744",borderRadius:8,padding:"5px 12px",fontSize:12,color:"#ff8a80",display:"flex",alignItems:"center",gap:6}},e("span",null,dm.from?"🎯 Doel":"⛓ Bron"),e("button",{onClick:()=>sDM(null),style:{background:"none",border:"none",color:"#ff5252",cursor:"pointer"}},"✕")),
@@ -312,23 +312,32 @@ function Root(){
   const[teamName,setTeamName]=useState("");
   const[accessOk,setAccessOk]=useState(null);
   const[groupId,setGroupId]=useState(null);
+  const[groupName,setGroupName]=useState("");
+  const[inTeamsNoGroup,setInTeamsNoGroup]=useState(false);
 
-  // Check access + resolve Teams group id
+  // Resolve Teams group id (strict per-team isolation)
   useEffect(()=>{
     const isLocal=location.hostname==="localhost"||location.hostname==="127.0.0.1";
     let done=false;
-    const finish=(gid)=>{if(done)return;done=true;const isTeams=window.__inTeams===true;setAccessOk(isTeams||isLocal);setGroupId(gid||"local")};
-    // Try to read the Teams context for the group id
+    const ok=(gid,gname)=>{if(done)return;done=true;window.__inTeams=true;setGroupId(gid);setGroupName(gname||"");setAccessOk(true)};
+    const noGroup=()=>{if(done)return;done=true;setInTeamsNoGroup(true);setAccessOk(false)};
+    const localOrDeny=()=>{if(done)return;done=true;if(isLocal){setGroupId("local");setGroupName("Lokaal (test)");setAccessOk(true)}else{setAccessOk(false)}};
     (async()=>{
       try{
+        await microsoftTeams.app.initialize();          // must complete before getContext
         const ctx=await microsoftTeams.app.getContext();
-        const gid=(ctx&&ctx.team&&(ctx.team.groupId||ctx.team.internalId))||(ctx&&ctx.chat&&ctx.chat.id)||(ctx&&ctx.channel&&ctx.channel.id)||"local";
-        window.__inTeams=true;
-        finish(gid);
-      }catch(ex){/* not in Teams */}
+        const gid=(ctx&&ctx.team&&ctx.team.groupId)||(ctx&&ctx.chat&&ctx.chat.id)||(ctx&&ctx.channel&&ctx.channel.id)||(ctx&&ctx.team&&ctx.team.internalId);
+        const gname=(ctx&&ctx.team&&ctx.team.displayName)||(ctx&&ctx.channel&&ctx.channel.displayName)||"";
+        if(gid){ok(gid,gname);return;}
+        // In Teams but no usable group id -> show error, never share data
+        window.__inTeams=true;noGroup();
+      }catch(ex){
+        // getContext failed -> not in Teams (or SDK blocked)
+        localOrDeny();
+      }
     })();
-    // Fallback if getContext never resolves (browser / blocked)
-    setTimeout(()=>finish("local"),1500);
+    // Safety net: only fall back when NOT a real Teams session
+    setTimeout(()=>{if(!done){if(window.__inTeams===true)noGroup();else localOrDeny()}},5000);
   },[]);
 
   // Remember last team (per group)
@@ -344,9 +353,10 @@ function Root(){
   };
   const goBack=()=>{setTeamId(null);setTeamName("");localStorage.removeItem("ivm-last-team-"+groupId)};
 
-  if(accessOk===null||groupId===null)return e("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",background:"#0e0e1a",color:"#ccc",gap:12}},e(Logo),e("span",{style:{fontSize:18}},"Verbinding checken..."));
+  if(accessOk===null)return e("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",background:"#0e0e1a",color:"#ccc",gap:12}},e(Logo),e("span",{style:{fontSize:18}},"Verbinding checken..."));
+  if(inTeamsNoGroup)return e("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100vh",background:"#0e0e1a",padding:40,textAlign:"center"}},e(Logo),e("h2",{style:{marginTop:20,color:"#fff"}},"Kon team niet bepalen"),e("p",{style:{color:"#888",marginTop:10,fontSize:16,maxWidth:420,lineHeight:1.6}},"De Teams-groep kon niet worden vastgesteld. Sluit Teams volledig af (rechtermuis op het Teams-icoon in de systray → Afsluiten) en open de planner opnieuw."),e("div",{style:{marginTop:24,padding:"12px 24px",background:"#1a1a30",borderRadius:8,color:"#555",fontSize:13}},"Systray → Teams → Afsluiten → heropenen"));
   if(accessOk===false)return e("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100vh",background:"#0e0e1a",padding:40,textAlign:"center"}},e(Logo),e("h2",{style:{marginTop:20,color:"#fff"}},"Toegang Geweigerd"),e("p",{style:{color:"#888",marginTop:10,fontSize:16,maxWidth:400,lineHeight:1.6}},"IVM Planner is alleen beschikbaar via Microsoft Teams. Open de app in Teams om verder te gaan."),e("div",{style:{marginTop:24,padding:"12px 24px",background:"#1a1a30",borderRadius:8,color:"#555",fontSize:13}},"Teams → Apps → IVM Planner"));
-  if(!teamId)return e(TeamSelect,{onSelect:selectTeam,groupId});
+  if(!teamId)return e(TeamSelect,{onSelect:selectTeam,groupId,groupName});
   return e(Planner,{teamId,teamName,onBack:goBack,groupId});
 }
 
