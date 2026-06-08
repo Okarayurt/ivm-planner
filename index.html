@@ -326,10 +326,15 @@ function Root(){
       try{
         await microsoftTeams.app.initialize();          // must complete before getContext
         const ctx=await microsoftTeams.app.getContext();
-        const gid=(ctx&&ctx.team&&ctx.team.groupId)||(ctx&&ctx.chat&&ctx.chat.id)||(ctx&&ctx.channel&&ctx.channel.id)||(ctx&&ctx.team&&ctx.team.internalId);
-        const gname=(ctx&&ctx.team&&ctx.team.displayName)||(ctx&&ctx.channel&&ctx.channel.displayName)||"";
+        const team=ctx&&ctx.team,chat=ctx&&ctx.chat,channel=ctx&&ctx.channel,user=ctx&&ctx.user;
+        let gid,gname;
+        if(team&&team.groupId){gid=team.groupId;gname=team.displayName||"Team";}
+        else if(chat&&chat.id){gid=chat.id;gname="Groepschat";}
+        else if(channel&&channel.id){gid=channel.id;gname=channel.displayName||"Kanaal";}
+        else if(team&&team.internalId){gid=team.internalId;gname=team.displayName||"Team";}
+        else if(user&&(user.id||user.aadObjectId)){gid="user-"+(user.id||user.aadObjectId);gname=(user.userPrincipalName||user.displayName||"Persoonlijk")+" (persoonlijk)";}
         if(gid){ok(gid,gname);return;}
-        // In Teams but no usable group id -> show error, never share data
+        // No usable id at all -> show error, never share data
         window.__inTeams=true;noGroup();
       }catch(ex){
         // getContext failed -> not in Teams (or SDK blocked)
